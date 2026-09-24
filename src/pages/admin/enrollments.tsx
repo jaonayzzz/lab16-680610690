@@ -66,7 +66,7 @@ function OptionSelect({
 }
 
 export default function AdminEnrollmentsPage() {
-  const { students, courses, enrollments, enroll } = useEnrollmentStore();
+  const { students, courses, enroll } = useEnrollmentStore();
 
   const [formStudent, setFormStudent] = useState<string | null>(null);
   const [formCourse, setFormCourse] = useState<string | null>(null);
@@ -80,16 +80,15 @@ export default function AdminEnrollmentsPage() {
     label: `${s.studentId} — ${s.firstName} ${s.lastName}`,
   }));
   const courseOptions: Option[] = courses.map((c) => ({
-    value: c.courseId,
-    label: `${c.courseId} — ${c.courseTitle}`,
+    value: c.courseCode,
+    label: `${c.courseCode} — ${c.courseTitle}`,
   }));
 
   // วิชาที่นักศึกษาที่เลือกยังไม่ได้ลงทะเบียน
+  const selectedStudent = students.find((s) => s.studentId === formStudent);
+
   const availableCourseOptions = courseOptions.filter(
-    (c) =>
-      !enrollments.some(
-        (e) => e.studentId === formStudent && e.courseId === c.value
-      )
+    (c) => !selectedStudent?.enrolledCourses.includes(c.value)
   );
 
   const handleEnroll = () => {
@@ -108,18 +107,25 @@ export default function AdminEnrollmentsPage() {
     }
   };
 
-  const rows = enrollments.filter((e) =>
-    mode === "course"
-      ? filterCourse === "all" || e.courseId === filterCourse
-      : filterStudent === "all" || e.studentId === filterStudent
-  );
+  const enrollmentRows = students.flatMap((s) =>
+  s.enrolledCourses.map((courseCode) => ({
+    studentId: s.studentId,
+    courseCode,
+  }))
+);
+
+const rows = enrollmentRows.filter((e) =>
+  mode === "course"
+    ? filterCourse === "all" || e.courseCode === filterCourse
+    : filterStudent === "all" || e.studentId === filterStudent
+);
 
   const nameOf = (studentId: string) => {
     const s = students.find((x) => x.studentId === studentId);
     return s ? `${s.firstName} ${s.lastName}` : "-";
   };
   const titleOf = (courseId: string) =>
-    courses.find((c) => c.courseId === courseId)?.courseTitle ?? "-";
+    courses.find((c) => c.courseCode === courseId)?.courseTitle ?? "-";
 
   return (
     <div className="space-y-4">
@@ -228,11 +234,11 @@ export default function AdminEnrollmentsPage() {
               </TableRow>
             )}
             {rows.map((e) => (
-              <TableRow key={`${e.studentId}-${e.courseId}`}>
+              <TableRow key={`${e.studentId}-${e.courseCode}`}>
                 <TableCell>{e.studentId}</TableCell>
                 <TableCell>{nameOf(e.studentId)}</TableCell>
-                <TableCell>{e.courseId}</TableCell>
-                <TableCell>{titleOf(e.courseId)}</TableCell>
+                <TableCell>{e.courseCode}</TableCell>
+                <TableCell>{titleOf(e.courseCode)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
