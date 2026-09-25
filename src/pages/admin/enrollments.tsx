@@ -126,6 +126,8 @@ const rows = enrollmentRows.filter((e) =>
   };
   const titleOf = (courseId: string) =>
     courses.find((c) => c.courseCode === courseId)?.courseTitle ?? "-";
+  const countOf = (courseCode: string) =>
+  enrollmentRows.filter((e) => e.courseCode === courseCode).length;
 
   return (
     <div className="space-y-4">
@@ -216,10 +218,12 @@ const rows = enrollmentRows.filter((e) =>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>รหัสนักศึกษา</TableHead>
-              <TableHead>ชื่อ-นามสกุล</TableHead>
+              
               <TableHead>รหัสวิชา</TableHead>
               <TableHead>ชื่อวิชา</TableHead>
+              <TableHead>จำนวนผู้ลงทะเบียน</TableHead>
+              <TableHead>ชื่อ-นามสกุล</TableHead>
+              
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -235,10 +239,12 @@ const rows = enrollmentRows.filter((e) =>
             )}
             {rows.map((e) => (
               <TableRow key={`${e.studentId}-${e.courseCode}`}>
-                <TableCell>{e.studentId}</TableCell>
-                <TableCell>{nameOf(e.studentId)}</TableCell>
+                
                 <TableCell>{e.courseCode}</TableCell>
-                <TableCell>{titleOf(e.courseCode)}</TableCell>
+                <TableCell>
+                  {titleOf(e.courseCode)}</TableCell>
+                <TableCell>{countOf(e.courseCode)}</TableCell>
+                <TableCell>{nameOf(e.studentId)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -11,6 +11,8 @@ type EnrollmentStore = {
   drop: (studentId: string, courseCode: string) => void;
   removeStudent: (studentId: string) => void;
   removeCourse: (courseCode: string) => void;
+  removeInstructor: (courseCode: string, instructor: string) => void;
+  addCourse: (courseCode: string, courseTitle: string, instructors: string[]) => void;
 };
 
 const STUDENT_ID = "680610690";
@@ -46,6 +48,21 @@ export const useEnrollmentStore = create<EnrollmentStore>()(
         set((state) => ({
           students: state.students.filter((s) => s.studentId !== studentId),
         })),
+        removeInstructor: (courseCode, instructor) =>
+  set((state) => ({
+    courses: state.courses.map((c) =>
+      c.courseCode === courseCode
+        ? {
+            ...c,
+            instructors: c.instructors?.filter((i) => i !== instructor),
+          }
+        : c,
+    ),
+  })),
+  addCourse: (courseCode, courseTitle, instructors) =>
+  set((state) => ({
+    courses: [...state.courses, { courseCode, courseTitle, instructors }],
+  })),
 
       removeCourse: (courseCode) =>
         set((state) => ({
@@ -65,4 +82,5 @@ export const useEnrollmentStore = create<EnrollmentStore>()(
       }),
     },
   ),
+  
 );
