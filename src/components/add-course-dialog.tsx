@@ -72,7 +72,7 @@ export function AddCourseDialog() {
               id="courseCode"
               value={courseCode}
               onChange={(e) => setCourseCode(e.target.value)}
-              className={isDuplicate ? "border-destructive" : ""}
+              aria-invalid={isDuplicate}
               placeholder="LIS236"
             />
             {isDuplicate && (
@@ -95,7 +95,7 @@ export function AddCourseDialog() {
           <div className="grid gap-1.5">
             <Label>ผู้สอน</Label>
             <MultiCombobox
-              options={allInstructors}
+              options={allInstructors.map((name) => ({ value: name, label: name }))}
               selected={instructors}
               onChange={setInstructors}
               placeholder="เลือกหรือพิมพ์ชื่อผู้สอน"

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEnrollmentStore } from "@/lib/enrollment-store";
+import { MultiCombobox, type ComboboxOption } from "@/components/multi-combobox";
 
 type Option = { value: string; label: string };
 
@@ -68,7 +69,7 @@ function OptionSelect({
 export default function AdminEnrollmentsPage() {
   const { students, courses, enroll } = useEnrollmentStore();
 
-  const [formStudent, setFormStudent] = useState<string | null>(null);
+  const [formStudents, setFormStudents] = useState<string[]>([]);
   const [formCourse, setFormCourse] = useState<string | null>(null);
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [mode, setMode] = useState<"course" | "student">("course");
@@ -84,28 +85,41 @@ export default function AdminEnrollmentsPage() {
     label: `${c.courseCode} — ${c.courseTitle}`,
   }));
 
+    const availableStudents: ComboboxOption[] = formCourse
+    ? students
+        .filter((s) => !s.enrolledCourses.includes(formCourse))
+        .map((s) => ({
+          value: s.studentId,
+          label: `${s.studentId} — ${s.firstName} ${s.lastName}`,
+          badgeLabel: `${s.firstName} ${s.lastName}`, // badge โชว์แค่ชื่อ
+        }))
+    : [];
   // วิชาที่นักศึกษาที่เลือกยังไม่ได้ลงทะเบียน
-  const selectedStudent = students.find((s) => s.studentId === formStudent);
+  {/*const selectedStudent = students.find((s) => s.studentId === formStudent);
 
   const availableCourseOptions = courseOptions.filter(
     (c) => !selectedStudent?.enrolledCourses.includes(c.value)
-  );
+  );*/}
 
   const handleEnroll = () => {
-    if (!formStudent || !formCourse) return;
-    enroll(formStudent, formCourse);
+    if (!formCourse || formStudents.length === 0) return;
+    formStudents.forEach((studentId) => enroll(studentId, formCourse));
     setEnrollDialogOpen(false);
   };
 
-  // เคลียร์ฟอร์มทุกครั้งที่ Dialog ปิด ไม่ว่าจะปิดเพราะลงทะเบียนสำเร็จ, กด X,
-  // หรือคลิกนอก Dialog — เปิดครั้งหน้าจะได้เริ่มจากฟอร์มว่างเสมอ
   const handleEnrollDialogOpenChange = (open: boolean) => {
     setEnrollDialogOpen(open);
     if (!open) {
-      setFormStudent(null);
       setFormCourse(null);
+      setFormStudents([]);
     }
   };
+
+  const handleCourseChange = (v: string) => {
+    setFormCourse(v);
+    setFormStudents([]);
+  };
+
 
   const enrollmentRows = students.flatMap((s) =>
   s.enrolledCourses.map((courseCode) => ({
@@ -139,54 +153,52 @@ const rows = enrollmentRows.filter((e) =>
       </div>
 
       <Dialog open={enrollDialogOpen} onOpenChange={handleEnrollDialogOpenChange}>
-        <DialogTrigger render={<Button />}>
-          <PlusCircle className="h-4 w-4" />
-          ลงทะเบียนให้นักศึกษา
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>ลงทะเบียนให้นักศึกษา</DialogTitle>
-            <DialogDescription>
-              เลือกนักศึกษาก่อน แล้วเลือกวิชาที่ยังไม่ได้ลงทะเบียน
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="formStudent">นักศึกษา</Label>
-              <OptionSelect
-                id="formStudent"
-                options={studentOptions}
-                value={formStudent}
-                placeholder="เลือกนักศึกษา"
-                onChange={(v) => {
-                  setFormStudent(v);
-                  setFormCourse(null);
-                }}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="formCourse">วิชา</Label>
-              <OptionSelect
-                id="formCourse"
-                options={availableCourseOptions}
-                value={formCourse}
-                placeholder={
-                  formStudent && availableCourseOptions.length === 0
-                    ? "ลงทะเบียนครบทุกวิชาแล้ว"
-                    : "เลือกวิชา"
-                }
-                onChange={setFormCourse}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button disabled={!formStudent || !formCourse} onClick={handleEnroll}>
-              <PlusCircle className="h-4 w-4" />
-              ลงทะเบียน
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+  <DialogTrigger render={<Button />}>
+    <PlusCircle className="h-4 w-4" />
+    ลงทะเบียนให้นักศึกษา
+  </DialogTrigger>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>ลงทะเบียนให้นักศึกษา</DialogTitle>
+      <DialogDescription>
+        เลือกวิชาก่อน แล้วเลือกนักศึกษาที่ยังไม่ได้ลงทะเบียนวิชานั้น (เลือกได้มากกว่า 1 คน)
+      </DialogDescription>
+    </DialogHeader>
+    <div className="grid gap-4">
+      <div className="grid gap-1.5">
+        <Label htmlFor="formCourse">วิชา</Label>
+        <OptionSelect
+          id="formCourse"
+          options={courseOptions}
+          value={formCourse}
+          placeholder="เลือกวิชา"
+          onChange={handleCourseChange}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="formStudents">นักศึกษา</Label>
+        <MultiCombobox
+          options={availableStudents}
+          selected={formStudents}
+          onChange={setFormStudents}
+          disabled={!formCourse}
+          disabledPlaceholder="เลือกวิชาก่อน"
+          placeholder="เลือกนักศึกษา"
+          allowCustom={false} // ห้ามพิมพ์เพิ่มชื่อใหม่ — เลือกจากรายชื่อที่มีเท่านั้น
+        />
+      </div>
+    </div>
+    <DialogFooter>
+      <Button
+        disabled={!formCourse || formStudents.length === 0}
+        onClick={handleEnroll}
+      >
+        <PlusCircle className="h-4 w-4" />
+        ลงทะเบียน
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
       <Tabs
         value={mode}

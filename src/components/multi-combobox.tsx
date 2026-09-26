@@ -1,27 +1,26 @@
-import { Check, ChevronsUpDown, X } from "lucide-react";
-import { useState } from "react";
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+import { Command as CommandPrimitive } from "cmdk";
+import { Check, X } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
+export type ComboboxOption = {
+  value: string;
+  label: string; // ข้อความที่แสดงใน dropdown list
+  badgeLabel?: string; // ข้อความที่แสดงใน badge (ถ้าไม่ใส่ จะใช้ label แทน)
+};
+
 type MultiComboboxProps = {
-  options: string[];
-  selected: string[];
+  options: ComboboxOption[];
+  selected: string[]; // เก็บเป็น value เท่านั้น
   onChange: (next: string[]) => void;
   placeholder?: string;
+  disabled?: boolean;
+  disabledPlaceholder?: string; // ข้อความตอน disabled (เช่น "เลือกวิชาก่อน")
+  allowCustom?: boolean; // เปิดให้พิมพ์เพิ่มค่าใหม่ที่ไม่มีใน options (default: true)
 };
 
 export function MultiCombobox({
@@ -29,7 +28,12 @@ export function MultiCombobox({
   selected,
   onChange,
   placeholder,
+  disabled,
+  disabledPlaceholder,
+  allowCustom = true,
 }: MultiComboboxProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -43,86 +47,105 @@ export function MultiCombobox({
 
   const remove = (value: string) => {
     onChange(selected.filter((v) => v !== value));
+    inputRef.current?.focus();
   };
 
   const trimmedSearch = search.trim();
-  const alreadyExists = [...options, ...selected].some(
-    (o) => o.toLowerCase() === trimmedSearch.toLowerCase(),
-  );
+  const alreadyExists = [
+    ...options.map((o) => o.label),
+    ...selected,
+  ].some((o) => o.toLowerCase() === trimmedSearch.toLowerCase());
+
+  const getBadgeLabel = (value: string) => {
+    const opt = options.find((o) => o.value === value);
+    return opt?.badgeLabel ?? opt?.label ?? value; // fallback = value เอง (เคสพิมพ์ชื่อใหม่)
+  };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            className="flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs"
-          />
-        }
+    <CommandPrimitive shouldFilter className="overflow-visible bg-transparent">
+      <PopoverPrimitive.Root
+        open={open && !disabled}
+        onOpenChange={(v) => !disabled && setOpen(v)}
       >
-        {selected.length === 0 && (
-          <span className="text-muted-foreground">
-            {placeholder ?? "เลือกผู้สอน"}
-          </span>
-        )}
-        {selected.map((s) => (
-          <Badge
-            key={s}
-            variant="secondary"
-            className="gap-1"
-            
-            onClick={(e) => e.stopPropagation()}
-          >
-            {s}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation(); 
-                remove(s);
-              }}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-        <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
-      </PopoverTrigger>
-
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
-          <CommandInput
-            placeholder="ค้นหาหรือพิมพ์ชื่อใหม่..."
+        <div
+          ref={anchorRef}
+          onClick={() => !disabled && inputRef.current?.focus()}
+          className={cn(
+            "flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm shadow-xs",
+            disabled && "cursor-not-allowed bg-muted opacity-60",
+          )}
+        >
+          {selected.map((value) => (
+            <Badge key={value} variant="secondary" className="gap-1">
+              {getBadgeLabel(value)}
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => remove(value)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+          <CommandPrimitive.Input
+            ref={inputRef}
             value={search}
             onValueChange={setSearch}
+            onFocus={() => !disabled && setOpen(true)}
+            disabled={disabled}
+            placeholder={
+              selected.length === 0
+                ? disabled
+                  ? disabledPlaceholder ?? placeholder
+                  : placeholder
+                : undefined
+            }
+            className="min-w-[80px] flex-1 bg-transparent outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
           />
-          <CommandList>
-            <CommandEmpty>ไม่พบผู้สอน</CommandEmpty>
-            <CommandGroup>
-              {options.map((o) => (
-                <CommandItem key={o} onSelect={() => toggle(o)}>
-                  <Check
-                    className={cn(
-                      "h-4 w-4",
-                      selected.includes(o) ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  {o}
-                </CommandItem>
-              ))}
-              {trimmedSearch && !alreadyExists && (
-                <CommandItem
-                  onSelect={() => {
-                    toggle(trimmedSearch);
-                    setSearch("");
-                  }}
-                >
-                  + เพิ่มผู้สอน "{trimmedSearch}"
-                </CommandItem>
-              )}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        </div>
+
+        <PopoverPrimitive.Portal>
+          <PopoverPrimitive.Positioner
+            anchor={anchorRef}
+            side="bottom"
+            sideOffset={4}
+            className="isolate z-50"
+          >
+            <PopoverPrimitive.Popup
+              initialFocus={false}
+              className="z-50 w-(--anchor-width) rounded-lg bg-popover p-1 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden"
+            >
+              <CommandList>
+                <CommandGroup>
+                  {options.map((o) => (
+                    <CommandItem key={o.value} value={o.label} onSelect={() => toggle(o.value)}>
+                      <Check
+                        className={cn(
+                          "h-4 w-4",
+                          selected.includes(o.value) ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      {o.label}
+                    </CommandItem>
+                  ))}
+                  {allowCustom && trimmedSearch && !alreadyExists && (
+                    <CommandItem
+                      key={`__add_${trimmedSearch}`}
+                      value={`__add_${trimmedSearch}`}
+                      onSelect={() => {
+                        toggle(trimmedSearch);
+                        setSearch("");
+                      }}
+                    >
+                      + เพิ่มผู้สอน "{trimmedSearch}"
+                    </CommandItem>
+                  )}
+                </CommandGroup>
+              </CommandList>
+            </PopoverPrimitive.Popup>
+          </PopoverPrimitive.Positioner>
+        </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>
+    </CommandPrimitive>
   );
 }
