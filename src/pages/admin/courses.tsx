@@ -36,6 +36,8 @@ export default function AdminCoursesPage() {
       setCourseToDelete(null);
     }
   };
+  const INSTRUCTOR_BADGE_CLASS =
+  "gap-1 border-blue-500/30 bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
 
   return (
     <div className="space-y-4">
@@ -83,7 +85,7 @@ export default function AdminCoursesPage() {
                       </span>
                     ) : (
                       c.instructors.map((instructor) => (
-                        <Badge key={instructor} variant="secondary" className="gap-1">
+                        <Badge key={instructor} className={INSTRUCTOR_BADGE_CLASS}>
                           {instructor}
                           <button
                             type="button"
@@ -115,17 +117,15 @@ export default function AdminCoursesPage() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>ยืนยันการลบวิชา</AlertDialogTitle>
+                        <AlertDialogTitle>ลบวิชา?</AlertDialogTitle>
                         <AlertDialogDescription>
                           ต้องการลบวิชา {c.courseCode} — {c.courseTitle} ใช่หรือไม่?
-                          การลบนี้จะเอาวิชานี้ออกจากรายการที่นักศึกษาลงทะเบียนไว้ด้วย
-                          และไม่สามารถย้อนกลับได้
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmDelete}>
-                          ลบวิชา
+                        <AlertDialogAction variant="destructive" onClick={handleConfirmDelete}>
+                          ยืนยัน
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

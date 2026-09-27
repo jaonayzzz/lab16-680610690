@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { PlusCircle } from "lucide-react";
+import { X } from "lucide-react"; // เพิ่มเข้าไปใน import เดิมจาก lucide-react
+import { Badge } from "@/components/ui/badge";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -67,7 +69,7 @@ function OptionSelect({
 }
 
 export default function AdminEnrollmentsPage() {
-  const { students, courses, enroll } = useEnrollmentStore();
+  const { students, courses, enroll, drop } = useEnrollmentStore();
 
   const [formStudents, setFormStudents] = useState<string[]>([]);
   const [formCourse, setFormCourse] = useState<string | null>(null);
@@ -133,15 +135,30 @@ const rows = enrollmentRows.filter((e) =>
     ? filterCourse === "all" || e.courseCode === filterCourse
     : filterStudent === "all" || e.studentId === filterStudent
 );
-
-  const nameOf = (studentId: string) => {
+const filteredCourses = courses.filter((c) => {
+  if (mode === "course") {
+    return filterCourse === "all" || c.courseCode === filterCourse;
+  }
+  // mode === "student": โชว์เฉพาะวิชาที่นักศึกษาคนที่เลือกลงทะเบียนอยู่
+  return (
+    filterStudent === "all" ||
+    students
+      .find((s) => s.studentId === filterStudent)
+      ?.enrolledCourses.includes(c.courseCode)
+  );
+});
+  {/*const nameOf = (studentId: string) => {
     const s = students.find((x) => x.studentId === studentId);
     return s ? `${s.firstName} ${s.lastName}` : "-";
   };
   const titleOf = (courseId: string) =>
-    courses.find((c) => c.courseCode === courseId)?.courseTitle ?? "-";
+    courses.find((c) => c.courseCode === courseId)?.courseTitle ?? "-";*/}
   const countOf = (courseCode: string) =>
   enrollmentRows.filter((e) => e.courseCode === courseCode).length;
+  const studentsOf = (courseCode: string) =>
+  students.filter((s) => s.enrolledCourses.includes(courseCode));
+  const INSTRUCTOR_BADGE_CLASS =
+  "gap-1 border-blue-500/30 bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
 
   return (
     <div className="space-y-4">
@@ -249,16 +266,33 @@ const rows = enrollmentRows.filter((e) =>
                 </TableCell>
               </TableRow>
             )}
-            {rows.map((e) => (
-              <TableRow key={`${e.studentId}-${e.courseCode}`}>
-                
-                <TableCell>{e.courseCode}</TableCell>
-                <TableCell>
-                  {titleOf(e.courseCode)}</TableCell>
-                <TableCell>{countOf(e.courseCode)}</TableCell>
-                <TableCell>{nameOf(e.studentId)}</TableCell>
-              </TableRow>
-            ))}
+            {filteredCourses.map((c) => (
+  <TableRow key={c.courseCode}>
+    <TableCell>{c.courseCode}</TableCell>
+    <TableCell>{c.courseTitle}</TableCell>
+    <TableCell>{countOf(c.courseCode)}</TableCell>
+    <TableCell>
+        <div className="flex flex-wrap gap-1">
+          {studentsOf(c.courseCode).length === 0 ? (
+            <span className="text-sm text-muted-foreground">ยังไม่มีนักศึกษาลงทะเบียน</span>
+          ) : (
+            studentsOf(c.courseCode).map((s) => (
+              <Badge key={s.studentId} className={INSTRUCTOR_BADGE_CLASS}>
+                {s.firstName} {s.lastName}
+                <button
+                  type="button"
+                  onClick={() => drop(s.studentId, c.courseCode)}
+                  className="rounded-full hover:bg-muted-foreground/20"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))
+          )}
+        </div>
+      </TableCell>
+  </TableRow>
+))}
           </TableBody>
         </Table>
       </div>
